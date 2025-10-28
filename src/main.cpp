@@ -1,0 +1,120 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+
+// Define implementation macro *before* including miniaudio
+// This tells the compiler to compile the library's functions here.
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
+
+// Kiss FFT includes (must be included after miniaudio.h if using the lib/ path)
+#include "kiss_fft.h"
+#include "kiss_fftr.h"
+
+// Define the size of the FFT frame (must be a power of 2)
+#define NFFT 1024
+
+// --- Main application logic ---
+
+/**
+ * @brief Loads a specified audio file into a float vector buffer.
+ * * @param filename The path to the audio file (e.g., "music.wav").
+ * @param sampleRate The desired output sample rate (e.g., 44100).
+ * @return std::vector<float> Vector containing the audio samples (-1.0 to 1.0).
+ */
+std::vector<float> load_audio(const char* filename, ma_uint32 sampleRate) {
+    ma_decoder decoder;
+    ma_result result;
+    
+    // Configure decoder to output single-channel (mono), 32-bit float samples
+    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 1, sampleRate);
+    
+    result = ma_decoder_init_file(filename, &config, &decoder);
+    if (result != MA_SUCCESS) {
+        std::cerr << "Error: Failed to load audio file: " << filename << std::endl;
+        return {};
+    }
+
+    ma_uint64 totalFrames = 0;
+    ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames);
+    ma_uint64 totalSamples = totalFrames * decoder.outputChannels;
+
+    std::vector<float> audioBuffer(totalSamples);
+    
+    ma_uint64 framesRead = 0;
+    ma_decoder_read_pcm_frames(&decoder, audioBuffer.data(), totalFrames, &framesRead);
+
+    if (framesRead != totalFrames) {
+        std::cerr << "Warning: Read less data than expected." << std::endl;
+    }
+
+    ma_decoder_uninit(&decoder);
+    std::cout << "Successfully loaded " << totalSamples << " samples from " << filename << std::endl;
+    return audioBuffer;
+}
+
+
+int main(int argc, char* argv[]) {
+    // 1. Audio Loading (Example: use a placeholder path)
+    std::string audioPath = "music.wav"; // REPLACE THIS with your actual audio file path
+    ma_uint32 sampleRate = 44100;
+    std::vector<float> audioData = load_audio(audioPath.c_str(), sampleRate);
+
+    if (audioData.empty()) {
+        std::cerr << "Exiting due to audio loading error." << std::endl;
+        return 1;
+    }
+
+    // 2. Kiss FFT Setup (Using Real FFT: kiss_fftr)
+    // We use the real-valued FFT because audio samples are real numbers.
+    kiss_fftr_cfg cfg = kiss_fftr_alloc(NFFT, 0 /* is_inverse_fft=0 */, nullptr, nullptr);
+
+    if (cfg == nullptr) {
+        std::cerr << "Error: Failed to allocate Kiss FFT configuration." << std::endl;
+        return 1;
+    }
+    
+    // --- FFT Input/Output Buffers ---
+    // FFT Input: NFFT real samples
+    kiss_fft_scalar input_frame[NFFT]; // float is the default scalar type
+    
+    // FFT Output: (NFFT/2 + 1) complex frequency bins
+    kiss_fft_cpx output_spectrum[NFFT / 2 + 1];
+
+    // 3. Process the first frame (NFFT samples)
+    if (audioData.size() >= NFFT) {
+        // Copy the first NFFT samples from the loaded data into the input frame
+        std::copy(audioData.begin(), audioData.begin() + NFFT, input_frame);
+
+        // Perform the FFT (Time Domain -> Frequency Domain)
+        kiss_fftr(cfg, input_frame, output_spectrum);
+        
+        // 4. Calculate and Display Magnitudes
+        std::cout << "\nFrequency Spectrum (First Frame):\n";
+        for (int i = 0; i < NFFT / 2 + 1; ++i) {
+            // Magnitude = sqrt(Real^2 + Imaginary^2)
+            float magnitude = std::sqrt(
+                output_spectrum[i].r * output_spectrum[i].r + 
+                output_spectrum[i].i * output_spectrum[i].i
+            );
+            
+            // Calculate the actual frequency for this bin
+            float freq = (float)i * sampleRate / NFFT;
+
+            // This magnitude is the data you map to visual elements!
+            if (i < 10 || i % 50 == 0) { // Print only a few bins to avoid spam
+                 std::cout << "Bin " << i << " (" << freq << " Hz): Magnitude = " << magnitude << std::endl;
+            }
+        }
+    } else {
+        std::cerr << "Audio file is too short to process one FFT frame (" << NFFT << " samples needed)." << std::endl;
+    }
+
+    // Cleanup
+    kiss_fft_free(cfg);
+    
+    std::cout << "\nAudio processing complete. You now have the fundamental frequency data." << std::endl;
+
+    // Next step: Integrate this magnitude data with OpenGL rendering.
+    return 0;
+}

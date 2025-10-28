@@ -1,0 +1,36 @@
+project(MusicVisualizer LANGUAGES CXX C)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+set(CXX_SOURCES src/main.cpp)
+
+set(C_SOURCES 
+    src/kiss_fft.c
+    src/kiss_fftr.c)
+
+set(PROJECT_SOURCE 
+    ${CXX_SOURCES}
+    ${C_SOURCES}
+)
+
+add_executable(visualizer ${PROJECT_SOURCES})
+
+target_include_directories(visualizer PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+
+if(UNIX)
+    # Target Linux/macOS
+    target_link_libraries(visualizer PRIVATE m pthread dlfcn)
+elseif(WIN32)
+    # Target Windows
+    # If using OpenGL/GLFW/etc., you would add those dependencies here later.
+    target_link_libraries(visualizer PRIVATE) 
+endif()
+
+set_target_properties(visualizer PROPERTIES 
+    CXX_EXTENSIONS OFF
+)
