@@ -1,20 +1,11 @@
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
 #include <iostream>
 #include <vector>
 #include <cmath>
 
-// Define implementation macro *before* including miniaudio
-// This tells the compiler to compile the library's functions here.
-#define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
-
-// Kiss FFT includes (must be included after miniaudio.h if using the lib/ path)
-#include "kiss_fft.h"
 #include "kiss_fftr.h"
-
-// Define the size of the FFT frame (must be a power of 2)
 #define NFFT 1024
-
-// --- Main application logic ---
 
 /**
  * @brief Loads a specified audio file into a float vector buffer.
@@ -56,7 +47,7 @@ std::vector<float> load_audio(const char* filename, ma_uint32 sampleRate) {
 
 int main(int argc, char* argv[]) {
     // 1. Audio Loading (Example: use a placeholder path)
-    std::string audioPath = "music.wav"; // REPLACE THIS with your actual audio file path
+    std::string audioPath = "flower_thief.mp3";
     ma_uint32 sampleRate = 44100;
     std::vector<float> audioData = load_audio(audioPath.c_str(), sampleRate);
 
@@ -81,10 +72,16 @@ int main(int argc, char* argv[]) {
     // FFT Output: (NFFT/2 + 1) complex frequency bins
     kiss_fft_cpx output_spectrum[NFFT / 2 + 1];
 
+    size_t offset_in_seconds = 5;
+    size_t sample_offset = offset_in_seconds * sampleRate;
     // 3. Process the first frame (NFFT samples)
-    if (audioData.size() >= NFFT) {
+    if (audioData.size() >= sample_offset + NFFT) {
         // Copy the first NFFT samples from the loaded data into the input frame
-        std::copy(audioData.begin(), audioData.begin() + NFFT, input_frame);
+        std::copy(
+            audioData.begin() + sample_offset, 
+            audioData.begin() + sample_offset + NFFT, 
+            input_frame
+        );
 
         // Perform the FFT (Time Domain -> Frequency Domain)
         kiss_fftr(cfg, input_frame, output_spectrum);
