@@ -7,6 +7,9 @@
 #include "kiss_fftr.h"
 #define NFFT 1024
 
+#include <glad/glad.h> 
+#include <GLFW/glfw3.h>
+
 /**
  * @brief Loads a specified audio file into a float vector buffer.
  * * @param filename The path to the audio file (e.g., "music.wav").
@@ -46,7 +49,6 @@ std::vector<float> load_audio(const char* filename, ma_uint32 sampleRate) {
 
 
 int main(int argc, char* argv[]) {
-    // 1. Audio Loading (Example: use a placeholder path)
     std::string audioPath = "flower_thief.mp3";
     ma_uint32 sampleRate = 44100;
     std::vector<float> audioData = load_audio(audioPath.c_str(), sampleRate);
@@ -57,7 +59,6 @@ int main(int argc, char* argv[]) {
     }
 
     // 2. Kiss FFT Setup (Using Real FFT: kiss_fftr)
-    // We use the real-valued FFT because audio samples are real numbers.
     kiss_fftr_cfg cfg = kiss_fftr_alloc(NFFT, 0 /* is_inverse_fft=0 */, nullptr, nullptr);
 
     if (cfg == nullptr) {
@@ -67,7 +68,7 @@ int main(int argc, char* argv[]) {
     
     // --- FFT Input/Output Buffers ---
     // FFT Input: NFFT real samples
-    kiss_fft_scalar input_frame[NFFT]; // float is the default scalar type
+    kiss_fft_scalar input_frame[NFFT];
     
     // FFT Output: (NFFT/2 + 1) complex frequency bins
     kiss_fft_cpx output_spectrum[NFFT / 2 + 1];
@@ -76,7 +77,6 @@ int main(int argc, char* argv[]) {
     size_t sample_offset = offset_in_seconds * sampleRate;
     // 3. Process the first frame (NFFT samples)
     if (audioData.size() >= sample_offset + NFFT) {
-        // Copy the first NFFT samples from the loaded data into the input frame
         std::copy(
             audioData.begin() + sample_offset, 
             audioData.begin() + sample_offset + NFFT, 
@@ -107,11 +107,9 @@ int main(int argc, char* argv[]) {
         std::cerr << "Audio file is too short to process one FFT frame (" << NFFT << " samples needed)." << std::endl;
     }
 
-    // Cleanup
     kiss_fft_free(cfg);
     
     std::cout << "\nAudio processing complete. You now have the fundamental frequency data." << std::endl;
 
-    // Next step: Integrate this magnitude data with OpenGL rendering.
     return 0;
 }
