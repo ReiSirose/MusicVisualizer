@@ -1,38 +1,51 @@
 project(MusicVisualizer LANGUAGES CXX C)
-cmake_minimum_required(VERSION 3.10) # 3.10 is a more compatible version
+cmake_minimum_required(VERSION 3.10)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+find_package(glfw3 CONFIG REQUIRED) 
+find_package(OpenGL REQUIRED)
 
 add_library(kissfft_lib STATIC
     third_party/kiss_fft/kiss_fft.c
     third_party/kiss_fft/kiss_fftr.c
 )
 
-
 target_include_directories(kissfft_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/kiss_fft
 )
 
-add_executable(visualizer src/main.cpp)
+add_executable(visualizer
+    src/main.cpp
+    third_party/glad/src/glad.c
+)
 
-# Add include paths for miniaudio.h and your own headers
 target_include_directories(visualizer PRIVATE 
-    ${CMAKE_CURRENT_SOURCE_DIR}/lib
+    # Your project includes
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib 
+    
+    # Third-party includes
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glad/include
 )
 
 target_link_libraries(visualizer PRIVATE 
-    kissfft_lib  # This links libkissfft_lib.a
+    # Your custom library
+    kissfft_lib
+    OpenGL::GL  
+    glfw       
 )
 
-# Add platform-specific libraries (miniaudio needs these)
 if(APPLE)
     target_link_libraries(visualizer PRIVATE 
         m 
         pthread 
         "-framework CoreFoundation" 
         "-framework CoreAudio"
+        "-framework Cocoa"
+        "-framework IOKit"
+        "-framework CoreVideo"
     )
 elseif(LINUX)
     target_link_libraries(visualizer PRIVATE m pthread dlfcn)
