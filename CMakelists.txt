@@ -20,6 +20,8 @@ target_include_directories(kissfft_lib PUBLIC
 add_executable(visualizer
     src/main.cpp
     src/shader.cpp
+    src/window.cpp
+    src/audio.cpp
     third_party/glad/src/glad.c
 )
 
