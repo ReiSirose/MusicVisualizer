@@ -2,6 +2,8 @@
 #include "window.h"
 #include <iostream>
 
+int Window::s_windowCount;
+
 Window::Window(const char* title, unsigned int width, unsigned int height){
     if(!glfwInit()){
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -28,7 +30,7 @@ Window::Window(const char* title, unsigned int width, unsigned int height){
 
     glfwMakeContextCurrent(m_window);
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-        std::cerr} << "Failed to initialize GLAD" << std::endl;
+        std::cerr << "Failed to initialize GLAD" << std::endl;
         return;
     }
     glfwSetWindowUserPointer(m_window, this);
