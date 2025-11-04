@@ -22,6 +22,7 @@ add_executable(visualizer
     src/shader.cpp
     src/window.cpp
     src/audio.cpp
+    src/geometry.cpp
     third_party/glad/src/glad.c
 )
 
