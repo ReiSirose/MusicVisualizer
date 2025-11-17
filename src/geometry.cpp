@@ -1,12 +1,13 @@
 #include "geometry.h"
 
 Geometry::Geometry(float* vertices, size_t size){
+    m_vertexCount = size / (sizeof(float) * 2);
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
 
     bind();
     glBindBuffer(GL_ARRAY_BUFFER, m_VBO);
-    glBufferData(GL_ARRAY_BUFFER, size, &m_VBO, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, size, vertices, GL_STATIC_DRAW);
     
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, (void*)0);
     glEnableVertexAttribArray(0);
