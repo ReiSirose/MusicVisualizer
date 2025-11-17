@@ -7,7 +7,15 @@
 #include <algorithm>
 #include "audio.h"
 
-Audio::Audio(const char* filename, uint32_t sampleRate, int nfftSize): m_cfg(nullptr), m_nfft(nfftSize), m_currentSampleIndex(0){
+
+Audio::Audio(const char* filename, uint32_t sampleRate, int nfftSize): 
+    m_cfg(nullptr), 
+    m_nfft(nfftSize), 
+    m_currentSampleIndex(0),
+    m_sampleRate(sampleRate),
+    m_channels(1),
+    m_playbackSampleIndex(0)
+{
     ma_decoder decoder;
     ma_result result;
 
@@ -40,9 +48,30 @@ Audio::Audio(const char* filename, uint32_t sampleRate, int nfftSize): m_cfg(nul
     m_fftIn.resize(m_nfft);
     m_fftOut.resize(m_nfft / 2 + 1);
     m_frequencyOut.resize(m_nfft / 2 + 1);
+
+    // Initialize audio devices 
+    ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
+    deviceConfig.playback.format   = ma_format_f32;
+    deviceConfig.playback.channels = m_channels;
+    deviceConfig.sampleRate        = m_sampleRate;
+    deviceConfig.dataCallback      = s_data_callback;
+    deviceConfig.pUserData         = this; // Pass 'this' pointer
+    if (ma_device_init(NULL, &deviceConfig, &m_device) != MA_SUCCESS) {
+        std::cerr << "Error: Failed to initialize playback device." << std::endl;
+        return;
+    }
+
+    if (ma_device_start(&m_device) != MA_SUCCESS) {
+        std::cerr << "Error: Failed to start playback device." << std::endl;
+        ma_device_uninit(&m_device);
+        return;
+    }
+
+    std::cout << "Audio playback started." << std::endl;
 }
 
 Audio::~Audio(){
+    ma_device_uninit(&m_device);
     kiss_fft_free(m_cfg);
 }
 
@@ -67,5 +96,37 @@ void Audio::Update(){
         float imagine {m_fftOut.at(i).i};
         m_frequencyOut[i] = std::sqrt(real * real + imagine * imagine);
     }
+
 }
 
+
+void Audio::s_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+{
+    // Get the 'this' pointer we stored in pUserData
+    Audio* pAudio = (Audio*)pDevice->pUserData;
+    if (pAudio) {
+        pAudio->data_callback(pOutput, frameCount);
+    }
+}
+
+void Audio::data_callback(void* pOutput, ma_uint32 frameCount)
+{
+    float* pOutputF32 = (float*)pOutput;
+    ma_uint32 samplesToRead = frameCount * m_channels;
+
+    if (m_playbackSampleIndex + samplesToRead > m_pcmData.size()) {
+        // --- End of song ---
+        ma_uint32 remainingSamples = m_pcmData.size() - m_playbackSampleIndex;
+        std::copy(m_pcmData.data() + m_playbackSampleIndex, m_pcmData.data() + m_pcmData.size(), pOutputF32);
+        
+        // Fill the rest with silence
+        for (ma_uint32 i = remainingSamples; i < samplesToRead; ++i) {
+            pOutputF32[i] = 0.0f;
+        }
+        m_playbackSampleIndex += remainingSamples; // Stop at the end
+    } else {
+        // --- Normal playback ---
+        std::copy(m_pcmData.data() + m_playbackSampleIndex, m_pcmData.data() + m_playbackSampleIndex + samplesToRead, pOutputF32);
+        m_playbackSampleIndex += samplesToRead;
+    }
+}
