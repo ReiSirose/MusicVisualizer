@@ -5,16 +5,18 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <atomic>
+#include <mutex>
 #include "audio.h"
 
 
 Audio::Audio(const char* filename, uint32_t sampleRate, int nfftSize): 
     m_cfg(nullptr), 
-    m_nfft(nfftSize), 
-    m_currentSampleIndex(0),
+    m_nfft(nfftSize),
     m_sampleRate(sampleRate),
     m_channels(1),
-    m_playbackSampleIndex(0)
+    m_playbackSampleIndex(0),
+    m_visualSampleIndex(0)
 {
     ma_decoder decoder;
     ma_result result;
@@ -79,24 +81,30 @@ void Audio::Update(){
     if(!m_cfg ||m_pcmData.empty()){
         return;
     }
+    size_t currentPlaybackIndex = m_playbackSampleIndex;
 
-    if(m_currentSampleIndex + m_nfft > m_pcmData.size()){
+    if(currentPlaybackIndex + m_nfft > m_pcmData.size()){
         std::fill(m_frequencyOut.begin(), m_frequencyOut.end(), 0.0f);
         return;
     }
+    if(currentPlaybackIndex > m_visualSampleIndex + m_nfft){
+        std::copy(
+            m_pcmData.begin() + currentPlaybackIndex,
+            m_pcmData.begin() + currentPlaybackIndex + m_nfft,
+            m_fftIn.begin()
+        );
 
-    std::copy(m_pcmData.begin() + m_currentSampleIndex, m_pcmData.begin() + m_currentSampleIndex + m_nfft, m_fftIn.data());
-
-    m_currentSampleIndex += m_nfft;
-
-    kiss_fftr(m_cfg, m_fftIn.data(), m_fftOut.data());
-    
-    for(size_t i = 0; i < m_frequencyOut.size(); ++i){
-        float real {m_fftOut.at(i).r};
-        float imagine {m_fftOut.at(i).i};
-        m_frequencyOut[i] = std::sqrt(real * real + imagine * imagine);
+        kiss_fftr(m_cfg, m_fftIn.data(), m_fftOut.data());
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            for(size_t i = 0; i < m_frequencyOut.size(); ++i){
+                float real {m_fftOut.at(i).r};
+                float imagine {m_fftOut.at(i).i};
+                m_frequencyOut[i] = std::sqrt(real * real + imagine * imagine);
+            }
+        }
+        m_visualSampleIndex = currentPlaybackIndex;
     }
-
 }
 
 

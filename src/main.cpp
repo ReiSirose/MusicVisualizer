@@ -17,16 +17,16 @@ const int SCREEN_HEIGHT = 720;
 const int NFFT = 1024;
 const int SAMPLE_RATE = 44100;
 int main (){
-    Audio audio ("flower_thief.mp3", SAMPLE_RATE, NFFT);
+    Audio audio ("../song/flower_thief.mp3", SAMPLE_RATE, NFFT);
     Window window ("flower thief", SCREEN_WIDTH, SCREEN_HEIGHT);
     
     Shader barShader("../shader/bar.vert", "../shader/bar.frag");
     float vertices[] = {
-        // positions
+        // bottom triangle
         0.0f, 1.0f,
         0.0f, 0.0f,
         1.0f, 0.0f,
-
+        // top triangle
         0.0f, 1.0f,
         1.0f, 0.0f,
         1.0f, 1.0f
@@ -55,7 +55,7 @@ int main (){
 
         for (int i = 0; i < numBars; ++i) {
             // Scale magnitude for screen
-            float magnitude = log10(1.0f + magnitudes[i]) * 50.0f;
+            float magnitude = log10(1.0f + magnitudes[i]) * 250.0f;
             if(magnitude < 2.0f) magnitude = 2.0f;
             if (magnitude > SCREEN_HEIGHT) magnitude = SCREEN_HEIGHT; // Clamp
             
