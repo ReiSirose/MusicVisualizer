@@ -46,7 +46,7 @@ Ensure you have a C++ compiler (GCC/Clang/MSVC) and CMake installed.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/MusicVisualizer.git
+git clone https://github.com/ReiSirose/MusicVisualizer.git
 
 cd MusicVisualizer
 
