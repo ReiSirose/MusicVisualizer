@@ -138,3 +138,9 @@ void Audio::data_callback(void* pOutput, ma_uint32 frameCount)
         m_playbackSampleIndex += samplesToRead;
     }
 }
+
+void Audio::setVolume(float volume){
+    if(m_device.pContext){
+        ma_device_set_master_volume(&m_device, volume);
+    }
+}

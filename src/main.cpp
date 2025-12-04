@@ -7,6 +7,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include "window.h"
 #include "audio.h"
 #include "geometry.h"
@@ -19,8 +23,8 @@ const int SAMPLE_RATE = 44100;
 int main (){
     Audio audio ("../song/flower_thief.mp3", SAMPLE_RATE, NFFT);
     Window window ("flower thief", SCREEN_WIDTH, SCREEN_HEIGHT);
-    
     Shader barShader("../shader/bar.vert", "../shader/bar.frag");
+
     float vertices[] = {
         // bottom triangle
         0.0f, 1.0f,
@@ -31,6 +35,7 @@ int main (){
         1.0f, 0.0f,
         1.0f, 1.0f
     };
+
     Geometry barGeometry (vertices, sizeof(vertices));
 
     barShader.use();
@@ -38,18 +43,25 @@ int main (){
     barShader.setMat4("projection", projection);
     barShader.setVec3("barColor", 1.0f, 0.5f, 0.2f); // Set to orange
 
+    // ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+    float masterVolume = 1.0f;
 
     while(!window.shouldClose()){
+
         window.processInput();
-
         audio.Update();
-
         window.startFrame();
 
         const std::vector<float>& magnitudes = audio.getFrequencyMagnitude();
-    
-
         barGeometry.bind();
+
         int numBars = magnitudes.size() / 4;
         float barWidth = (float)SCREEN_WIDTH / numBars;
 
@@ -72,6 +84,24 @@ int main (){
 
             barGeometry.draw();
         }
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Control");
+
+        ImGui::Text("Now playing: flower thief");
+        if(ImGui::SliderFloat("Volume", &masterVolume, 0.0f, 1.0f)){
+            audio.setVolume(masterVolume);
+        }
+        ImGui::Text("Application frame rate %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        
         window.endFrame();
     }
     return 0;
