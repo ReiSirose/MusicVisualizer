@@ -15,7 +15,7 @@ public:
     ~Audio();
 
     void Update();
-
+    void setVolume(float volume);
     // getter
     kiss_fftr_cfg& getConfig() {return m_cfg;}
     const std::vector<float>& getFrequencyMagnitude () const {return m_frequencyOut;}
