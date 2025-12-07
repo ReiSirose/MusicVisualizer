@@ -39,13 +39,12 @@ int main (){
     Geometry barGeometry (vertices, sizeof(vertices));
 
     barShader.use();
-    glm::mat4 projection = glm::ortho(0.0f, (float)SCREEN_WIDTH, 0.0f, (float)SCREEN_HEIGHT, -1.0f, 1.0f);
-    barShader.setMat4("projection", projection);
     barShader.setVec3("barColor", 1.0f, 0.5f, 0.2f);
 
     float barColor[3] = {1.0f, 0.5f, 0.2f};
     float sensitivity = 200.0f;
     float smoothFactor = 0.250f;
+    bool isFullscreen = false;
     std::vector<float> displayMagnitudes(NFFT / 2 + 1, 0.0f);
     // ImGui
     IMGUI_CHECKVERSION();
@@ -63,13 +62,19 @@ int main (){
         audio.Update();
         window.startFrame();
 
+        int currentWidth = window.getWidth();
+        int currentHeight = window.getHeight();
+        glm::mat4 projection = glm::ortho(0.0f, (float)currentWidth, 0.0f, (float)currentHeight, -1.0f, 1.0f);
+        barShader.use();
+        barShader.setMat4("projection", projection);
+
         const std::vector<float>& magnitudes = audio.getFrequencyMagnitude();
         barShader.use();
         barShader.setVec3("barColor", barColor[0], barColor[1], barColor[2]);
         barGeometry.bind();
 
         int numBars = magnitudes.size() / 4;
-        float barWidth = (float)SCREEN_WIDTH / numBars;
+        float barWidth = (float)currentWidth / numBars;
 
         for (int i = 0; i < numBars; ++i) {
             // Scale magnitude for screen
@@ -107,6 +112,9 @@ int main (){
 
         if(ImGui::SliderFloat("Volume", &masterVolume, 0.0f, 1.0f)){
             audio.setVolume(masterVolume);
+        }
+        if (ImGui::Checkbox("Fullscreen", &isFullscreen)) {
+            window.setFullscreen(isFullscreen);
         }
         ImGui::Text("Application frame rate %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 

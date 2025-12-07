@@ -21,17 +21,6 @@ The core achievement of this project is to make visualization for my favorite so
 
 The current focus is evolving the project from a static visualizer into an interactive application using **Dear ImGui**.
 
-- [ ] **Level 4: UI Integration**
-    - Integrate the ImGui library.
-    - Create a basic overlay window.
-    - Implement a Master Volume slider to control `miniaudio` output.
-
-- [ ] **Level 5: Visual Customization**
-    - Add UI controls to modify the visualizer in real-time.
-    - **Color Picker:** Change the RGB color of the bars.
-    - **Sensitivity:** Adjust the magnitude scaling factor (height of bars).
-    - **Smoothing:** Adjust the decay rate of the bars.
-
 - [ ] **Level 6: Playback Control (The Jukebox)**
     - Implement a "Load-All" playlist system.
     - **Controls:** Add Play, Pause, and Stop buttons.
