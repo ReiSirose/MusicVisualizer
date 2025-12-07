@@ -41,8 +41,12 @@ int main (){
     barShader.use();
     glm::mat4 projection = glm::ortho(0.0f, (float)SCREEN_WIDTH, 0.0f, (float)SCREEN_HEIGHT, -1.0f, 1.0f);
     barShader.setMat4("projection", projection);
-    barShader.setVec3("barColor", 1.0f, 0.5f, 0.2f); // Set to orange
+    barShader.setVec3("barColor", 1.0f, 0.5f, 0.2f);
 
+    float barColor[3] = {1.0f, 0.5f, 0.2f};
+    float sensitivity = 200.0f;
+    float smoothFactor = 0.250f;
+    std::vector<float> displayMagnitudes(NFFT / 2 + 1, 0.0f);
     // ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -60,6 +64,8 @@ int main (){
         window.startFrame();
 
         const std::vector<float>& magnitudes = audio.getFrequencyMagnitude();
+        barShader.use();
+        barShader.setVec3("barColor", barColor[0], barColor[1], barColor[2]);
         barGeometry.bind();
 
         int numBars = magnitudes.size() / 4;
@@ -67,21 +73,24 @@ int main (){
 
         for (int i = 0; i < numBars; ++i) {
             // Scale magnitude for screen
-            float magnitude = log10(1.0f + magnitudes[i]) * 250.0f;
-            if(magnitude < 2.0f) magnitude = 2.0f;
-            if (magnitude > SCREEN_HEIGHT) magnitude = SCREEN_HEIGHT; // Clamp
+            float magnitude = log10(1.0f + magnitudes[i]) * sensitivity;
+            
+            displayMagnitudes[i] += (magnitude - displayMagnitudes[i]) * smoothFactor;
+
+            float finalHeight = displayMagnitudes[i];
+            if (finalHeight > SCREEN_HEIGHT) finalHeight = SCREEN_HEIGHT;
+            if (finalHeight < 2.0f) finalHeight = 2.0f;
             
             // Calculate bar position
             float xPos = i * barWidth;
-            float yPos = 0.0f; // At the bottom
+            float yPos = 0.0f;
 
             // Create a "model" matrix for this *one* bar
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(xPos, yPos, 0.0f));
-            model = glm::scale(model, glm::vec3(barWidth - 1.0f, magnitude, 1.0f));
+            model = glm::scale(model, glm::vec3(barWidth - 2.0f, finalHeight, 1.0f));
 
             barShader.setMat4("model", model);
-
             barGeometry.draw();
         }
 
@@ -89,9 +98,13 @@ int main (){
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Control");
+        ImGui::Begin("Visualizer Setting");
 
         ImGui::Text("Now playing: flower thief");
+        ImGui::ColorEdit3("Bar Color", barColor);
+        ImGui::SliderFloat("Height Scale", &sensitivity, 10.0f, 250.0f);
+        ImGui::SliderFloat("Smoothing", &smoothFactor, 0.01f, 1.0f);
+
         if(ImGui::SliderFloat("Volume", &masterVolume, 0.0f, 1.0f)){
             audio.setVolume(masterVolume);
         }
@@ -101,8 +114,12 @@ int main (){
 
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-        
+
         window.endFrame();
     }
+
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
     return 0;
 }
