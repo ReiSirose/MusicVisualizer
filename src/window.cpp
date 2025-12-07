@@ -69,6 +69,45 @@ void Window::processInput()
         glfwSetWindowShouldClose(m_window, true);
 }
 
+void Window::setFullscreen(bool enable) {
+    if (enable == m_isFullscreen) return; // No change needed
+
+    if (enable) {
+        // 1. Save current state so we can restore it later
+        glfwGetWindowPos(m_window, &m_savedXPos, &m_savedYPos);
+        glfwGetWindowSize(m_window, &m_savedWidth, &m_savedHeight);
+
+        // 2. Get the primary monitor and its video mode (resolution)
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+        // 3. Switch! (Passing 'monitor' makes it fullscreen)
+        glfwSetWindowMonitor(m_window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        
+    } else {
+        // --- SWITCH TO WINDOWED ---
+        
+        // Restore to old position and size (Passing 'nullptr' makes it windowed)
+        glfwSetWindowMonitor(m_window, nullptr, m_savedXPos, m_savedYPos, m_savedWidth, m_savedHeight, 0);
+    }
+
+    m_isFullscreen = enable;
+    
+    // Force VSync on again (sometimes switching modes resets it)
+    glfwSwapInterval(1);
+}
+
+int Window::getWidth() const {
+    int w, h;
+    glfwGetFramebufferSize(m_window, &w, &h);
+    return w;
+}
+
+int Window::getHeight() const {
+    int w, h;
+    glfwGetFramebufferSize(m_window, &w, &h);
+    return h;
+}
 
 Window::~Window(){
     glfwDestroyWindow(m_window);
