@@ -31,6 +31,21 @@ The current focus is evolving the project from a static visualizer into an inter
 ### Prerequisites
 Ensure you have a C++ compiler (GCC/Clang/MSVC) and CMake installed.
 
+Run the setup script for your platform to install CMake and GLFW automatically.
+
+**Mac / Linux:**
+```bash
+chmod +x setup_deps.sh
+./setup_unix.sh
+```
+**Window**
+```
+./setup_win.sh
+If you use the Windows script (vcpkg), your CMake command changes slightly. You have to tell CMake where `vcpkg` is.
+
+You should update your build instructions for Windows to look like this:
+cmake .. -DCMAKE_TOOLCHAIN_FILE=../vcpkg/scripts/buildsystems/vcpkg.cmake
+```
 ### Build Instructions
 
 ```bash
