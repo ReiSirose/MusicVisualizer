@@ -54,7 +54,8 @@ int main (){
 
     ImGui_ImplGlfw_InitForOpenGL(window.getWindow(), true);
     ImGui_ImplOpenGL3_Init("#version 330");
-    float masterVolume = 1.0f;
+    float masterVolume {1.0f};
+    bool start {true};
 
     while(!window.shouldClose()){
 
@@ -116,6 +117,9 @@ int main (){
         if (ImGui::Checkbox("Fullscreen", &isFullscreen)) {
             window.setFullscreen(isFullscreen);
         }
+        if(ImGui::ArrowButton("PlayButton", ImGuiDir_Right)){
+            audio.playAudio(start);
+        }
         ImGui::Text("Application frame rate %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
 
         ImGui::End();
@@ -131,3 +135,12 @@ int main (){
     ImGui::DestroyContext();
     return 0;
 }
+
+
+
+/* TODO :
+
+Seeking add a progress slider to scrub through the song (utilizing the in-memory PCM buffer).
+Playlist: Allow switching between different loaded audio files (maybe we can implement cache instead of load every single song into memory)
+
+*/

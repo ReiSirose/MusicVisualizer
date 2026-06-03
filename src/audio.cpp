@@ -144,3 +144,19 @@ void Audio::setVolume(float volume){
         ma_device_set_master_volume(&m_device, volume);
     }
 }
+void Audio::playAudio(bool& start){
+    if(start){
+        if(ma_device_stop(&m_device) != MA_SUCCESS){
+            std::cerr << "Error: Failed to stop playback device." << std::endl;
+            ma_device_uninit(&m_device);
+        }
+        start = false;
+    }
+    else {
+        if(ma_device_start(&m_device) != MA_SUCCESS){
+            std::cerr << "Error: Failed to start playback device." << std::endl;
+            ma_device_uninit(&m_device);
+        }
+        start = true;
+    }
+}
