@@ -23,7 +23,6 @@ The current focus is evolving the project from a static visualizer into an inter
 
 - [ ] **Level 6: Playback Control (The Jukebox)**
     - Implement a "Load-All" playlist system.
-    - **Controls:** Add Play, Pause, and Stop buttons.
     - **Seeking:** Add a progress slider to scrub through the song (utilizing the in-memory PCM buffer).
     - **Playlist:** Allow switching between different loaded audio files.
 
