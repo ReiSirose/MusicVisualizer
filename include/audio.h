@@ -22,11 +22,14 @@ public:
     const std::vector<float>& getFrequencyMagnitude () const {return m_frequencyOut;}
     int getNFFT () const {return m_nfft;}
     const std::vector<float>& getPCM () const {return m_pcmData;}
+    size_t  getSampleIndex() {return m_playbackSampleIndex;}
+    void setSampleIndex(size_t index) {m_playbackSampleIndex = index;}
 
 private:
     // FFT member variable
     kiss_fftr_cfg m_cfg;
     int m_nfft;
+    unsigned int m_sCursor;
     // FFT member function
     std::vector<float> m_pcmData;
     std::vector<float> m_frequencyOut;
@@ -38,7 +41,7 @@ private:
     ma_uint32 m_sampleRate;
     ma_uint32 m_channels;
     std::atomic<size_t> m_playbackSampleIndex;    
-    size_t m_visualSampleIndex;
+    std::atomic<size_t>  m_visualSampleIndex;
     // Audio Playback member function
 
     std::mutex m_mutex;

@@ -25,6 +25,9 @@ int main (){
     Window window ("flower thief", SCREEN_WIDTH, SCREEN_HEIGHT);
     Shader barShader("../shader/bar.vert", "../shader/bar.frag");
 
+    // duration in seconds
+    size_t duration = audio.getPCM().size() / SAMPLE_RATE;
+    
     float vertices[] = {
         // bottom triangle
         0.0f, 1.0f,
@@ -56,7 +59,7 @@ int main (){
     ImGui_ImplOpenGL3_Init("#version 330");
     float masterVolume {1.0f};
     bool start {true};
-
+    float songSlider {0.0f};
     while(!window.shouldClose()){
 
         window.processInput();
@@ -111,6 +114,15 @@ int main (){
         ImGui::SliderFloat("Height Scale", &sensitivity, 10.0f, 250.0f);
         ImGui::SliderFloat("Smoothing", &smoothFactor, 0.01f, 1.0f);
 
+        // dynamically slide the song
+        auto audioIndex = audio.getSampleIndex();
+        auto pcmSize = audio.getPCM().size();
+        songSlider = static_cast<float>(audioIndex) / static_cast<float>(pcmSize) * 100.0f;
+        if(ImGui::SliderFloat("SongSlider", &songSlider, 0.0f, 100.0f)){
+            audioIndex = songSlider * static_cast<float>(pcmSize) / 100.0f;
+            audio.setSampleIndex(audioIndex);
+        }
+        
         if(ImGui::SliderFloat("Volume", &masterVolume, 0.0f, 1.0f)){
             audio.setVolume(masterVolume);
         }
