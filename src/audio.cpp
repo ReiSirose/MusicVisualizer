@@ -12,6 +12,7 @@
 
 Audio::Audio(const char* filename, uint32_t sampleRate, int nfftSize): 
     m_cfg(nullptr), 
+    m_sCursor(0),
     m_nfft(nfftSize),
     m_sampleRate(sampleRate),
     m_channels(1),
@@ -87,8 +88,11 @@ void Audio::Update(){
         std::fill(m_frequencyOut.begin(), m_frequencyOut.end(), 0.0f);
         return;
     }
-    if(currentPlaybackIndex > m_visualSampleIndex + m_nfft){
-        std::copy(
+    // TODO: Fix this for the bar visualization bug
+    // if(currentPlaybackIndex > m_visualSampleIndex + m_nfft){
+
+    // }
+    std::copy(
             m_pcmData.begin() + currentPlaybackIndex,
             m_pcmData.begin() + currentPlaybackIndex + m_nfft,
             m_fftIn.begin()
@@ -103,8 +107,7 @@ void Audio::Update(){
                 m_frequencyOut[i] = std::sqrt(real * real + imagine * imagine);
             }
         }
-        m_visualSampleIndex = currentPlaybackIndex;
-    }
+        m_visualSampleIndex.store(m_playbackSampleIndex.load());
 }
 
 
@@ -121,7 +124,7 @@ void Audio::data_callback(void* pOutput, ma_uint32 frameCount)
 {
     float* pOutputF32 = (float*)pOutput;
     ma_uint32 samplesToRead = frameCount * m_channels;
-
+    
     if (m_playbackSampleIndex + samplesToRead > m_pcmData.size()) {
         // --- End of song ---
         ma_uint32 remainingSamples = m_pcmData.size() - m_playbackSampleIndex;
