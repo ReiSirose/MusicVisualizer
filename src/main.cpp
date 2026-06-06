@@ -60,6 +60,7 @@ int main (){
     float masterVolume {1.0f};
     bool start {true};
     float songSlider {0.0f};
+    float bufferSongSlider {songSlider};
     while(!window.shouldClose()){
 
         window.processInput();
@@ -117,12 +118,16 @@ int main (){
         // dynamically slide the song
         auto audioIndex = audio.getSampleIndex();
         auto pcmSize = audio.getPCM().size();
-        songSlider = static_cast<float>(audioIndex) / static_cast<float>(pcmSize) * 100.0f;
-        if(ImGui::SliderFloat("SongSlider", &songSlider, 0.0f, 100.0f)){
+        bufferSongSlider = static_cast<float>(audioIndex) / static_cast<float>(pcmSize) * 100.0f;
+        if(ImGui::SliderFloat("SongSlider", &bufferSongSlider, 0.0f, 100.0f)){
+            songSlider = bufferSongSlider;
+        }
+
+        if(ImGui::IsItemDeactivatedAfterEdit()){
             audioIndex = songSlider * static_cast<float>(pcmSize) / 100.0f;
             audio.setSampleIndex(audioIndex);
         }
-        
+
         if(ImGui::SliderFloat("Volume", &masterVolume, 0.0f, 1.0f)){
             audio.setVolume(masterVolume);
         }
@@ -151,8 +156,5 @@ int main (){
 
 
 /* TODO :
-
-Seeking add a progress slider to scrub through the song (utilizing the in-memory PCM buffer).
 Playlist: Allow switching between different loaded audio files (maybe we can implement cache instead of load every single song into memory)
-
 */
