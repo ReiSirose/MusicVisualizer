@@ -56,7 +56,7 @@ target_link_libraries(visualizer PRIVATE
     kissfft_lib
     OpenGL::GL  
     glfw
-    glm::glm       
+    glm::glm
 )
 
 if(APPLE)
