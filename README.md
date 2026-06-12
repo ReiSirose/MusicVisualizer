@@ -16,15 +16,18 @@ The core achievement of this project is to make visualization for my favorite so
 * **Math:** [GLM](https://github.com/g-truc/glm)
 * **Audio:** [miniaudio](https://miniaud.io/) (Playback & Decoding)
 * **Analysis:** [kissfft](https://github.com/mborgerding/kissfft) (Frequency transformation)
-
+* **Media Downloader:** [dlp](https://github.com/yt-dlp/yt-dlp) (Video and audio extraction)
+* **Media Processing:** [ffmpeg](https://ffmpeg.org) (Audio format conversion and handling)
 ## 🗺️ Roadmap
 
 The current focus is evolving the project from a static visualizer into an interactive application using **Dear ImGui**.
 
 - [ ] **Level 6: Playback Control (The Jukebox)**
     - Implement a "Load-All" playlist system.
-    - **Seeking:** Add a progress slider to scrub through the song (utilizing the in-memory PCM buffer).
     - **Playlist:** Allow switching between different loaded audio files.
+
+- [ ] **Level 7: Add and Remove Song functionality**
+    - Remove song using the mp3 file name (unchanged if the song not exist)
 
 
 ### Prerequisites

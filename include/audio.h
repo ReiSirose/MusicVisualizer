@@ -29,7 +29,6 @@ private:
     // FFT member variable
     kiss_fftr_cfg m_cfg;
     int m_nfft;
-    unsigned int m_sCursor;
     // FFT member function
     std::vector<float> m_pcmData;
     std::vector<float> m_frequencyOut;

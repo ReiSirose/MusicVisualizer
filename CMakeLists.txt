@@ -1,6 +1,5 @@
-project(MusicVisualizer LANGUAGES CXX C)
 cmake_minimum_required(VERSION 3.10)
-
+project(MusicVisualizer LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -34,6 +33,7 @@ add_executable(visualizer
     src/shader.cpp
     src/window.cpp
     src/audio.cpp
+    src/song.cpp
     src/geometry.cpp
     third_party/glad/src/glad.c
     ${IMGUI_SOURCES}
@@ -59,6 +59,26 @@ target_link_libraries(visualizer PRIVATE
     glm::glm
 )
 
+add_executable(downloader src/downloader.cpp)
+
+set(TOOLS_DIR "${CMAKE_SOURCE_DIR}/third_party/bin")
+
+if(WIN32)
+    set(YT_DLP_PATH "${TOOLS_DIR}/yt-dlp.exe")
+    set(FFMPEG_PATH "${TOOLS_DIR}/ffmpeg.exe")
+else()
+    set(YT_DLP_PATH "${TOOLS_DIR}/yt-dlp")
+    set(FFMPEG_PATH "${TOOLS_DIR}/ffmpeg")
+endif()
+
+# Pass paths to C++ as preprocessor definitions
+add_definitions(-DYT_DLP_PATH="${YT_DLP_PATH}")
+add_definitions(-DFFMPEG_PATH="${FFMPEG_PATH}")
+
+target_compile_definitions(downloader PRIVATE 
+    YT_DLP_PATH="${YT_DLP_PATH}"
+    FFMPEG_PATH="${FFMPEG_PATH}"
+)
 if(APPLE)
     target_link_libraries(visualizer PRIVATE 
         m 

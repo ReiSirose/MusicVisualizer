@@ -11,8 +11,7 @@
 
 
 Audio::Audio(const char* filename, uint32_t sampleRate, int nfftSize): 
-    m_cfg(nullptr), 
-    m_sCursor(0),
+    m_cfg(nullptr),
     m_nfft(nfftSize),
     m_sampleRate(sampleRate),
     m_channels(1),
