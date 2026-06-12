@@ -15,16 +15,21 @@
 #include "audio.h"
 #include "geometry.h"
 #include "shader.h"
+#include "song.h"
 
 const int SCREEN_WIDTH = 1280;
 const int SCREEN_HEIGHT = 720;
 const int NFFT = 1024;
 const int SAMPLE_RATE = 44100;
+const char* SONG_NAME = "flower thief";
+const char* SONG_PATH = "../song/flower_thief.mp3";
+const char* VERTEX_SHADER = "../shader/bar.vert";
+const char* FRAGMENT_SHADER = "../shader/bar.frag";
 int main (){
-    Audio audio ("../song/flower_thief.mp3", SAMPLE_RATE, NFFT);
-    Window window ("flower thief", SCREEN_WIDTH, SCREEN_HEIGHT);
-    Shader barShader("../shader/bar.vert", "../shader/bar.frag");
-
+    Audio audio (SONG_PATH, SAMPLE_RATE, NFFT);
+    Window window (SONG_NAME, SCREEN_WIDTH, SCREEN_HEIGHT);
+    Shader barShader(VERTEX_SHADER, FRAGMENT_SHADER);
+    Song playerList {"../song"};
     // duration in seconds
     size_t duration = audio.getPCM().size() / SAMPLE_RATE;
     
@@ -45,7 +50,7 @@ int main (){
     barShader.setVec3("barColor", 1.0f, 0.5f, 0.2f);
 
     float barColor[3] = {1.0f, 0.5f, 0.2f};
-    float sensitivity = 200.0f;
+    float sensitivity = 250.0f;
     float smoothFactor = 0.250f;
     bool isFullscreen = false;
     std::vector<float> displayMagnitudes(NFFT / 2 + 1, 0.0f);
@@ -112,7 +117,7 @@ int main (){
 
         ImGui::Text("Now playing: flower thief");
         ImGui::ColorEdit3("Bar Color", barColor);
-        ImGui::SliderFloat("Height Scale", &sensitivity, 10.0f, 250.0f);
+        ImGui::SliderFloat("Height Scale", &sensitivity, 50.0f, 450.0f);
         ImGui::SliderFloat("Smoothing", &smoothFactor, 0.01f, 1.0f);
 
         // dynamically slide the song
@@ -156,5 +161,7 @@ int main (){
 
 
 /* TODO :
-Playlist: Allow switching between different loaded audio files (maybe we can implement cache instead of load every single song into memory)
+Add spacebar to stop the song
+Playlist: Allow switching between different loaded audio files 
+Cache for audio file (optional)
 */

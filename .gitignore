@@ -1,4 +1,7 @@
 build/
+build-xcode/
+song/
+imgui.ini
 
 *.o
 *.out
