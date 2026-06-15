@@ -17,6 +17,7 @@ Song::Song(std::string_view playListPath) : m_playListIndex{0}, m_playListPath{p
             for(const auto& entry: std::filesystem::directory_iterator(directoryPath)){
                 if (entry.is_regular_file()){
                     m_playList.push_back(std::move(entry.path().filename().string()));
+                    ++m_totalSong;
                 }
             }
         }
@@ -28,4 +29,9 @@ Song::Song(std::string_view playListPath) : m_playListIndex{0}, m_playListPath{p
 
 Song::~Song(){
 
+}
+
+
+void Song::loadAudio(bool cache){
+    
 }

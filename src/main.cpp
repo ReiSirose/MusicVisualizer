@@ -30,6 +30,11 @@ int main (){
     Window window (SONG_NAME, SCREEN_WIDTH, SCREEN_HEIGHT);
     Shader barShader(VERTEX_SHADER, FRAGMENT_SHADER);
     Song playerList {"../song"};
+
+
+
+
+
     // duration in seconds
     size_t duration = audio.getPCM().size() / SAMPLE_RATE;
     
