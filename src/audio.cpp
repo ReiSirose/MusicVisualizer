@@ -10,155 +10,133 @@
 #include "audio.h"
 
 
-Audio::Audio(const char* filename, uint32_t sampleRate, int nfftSize): 
+Audio::Audio(uint32_t sampleRate, int nfftSize): 
     m_cfg(nullptr),
     m_nfft(nfftSize),
     m_sampleRate(sampleRate),
     m_channels(1),
     m_playbackSampleIndex(0),
-    m_visualSampleIndex(0)
+    m_visualSampleIndex(0),
+    m_frontBufferIndex(0)
 {
-    ma_decoder decoder;
-    ma_result result;
-
-    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 1, sampleRate);
-    result = ma_decoder_init_file(filename, &config, &decoder);
-    if (result != MA_SUCCESS) {
-        std::cerr << "Error: Failed to load audio file: " << filename << std::endl;
-        return;
-    }
-
-    ma_uint64 totalFrames = 0;
-    ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames);
-    ma_uint64 totalSamples = totalFrames * decoder.outputChannels;
-    m_pcmData.resize(totalSamples);
-
-    ma_uint64 framesRead = 0;
-    ma_decoder_read_pcm_frames(&decoder, m_pcmData.data(), totalFrames, &framesRead);
-
-    if (framesRead != totalFrames) {
-        std::cerr << "Warning: Read less data than expected." << std::endl;
-    }
-    ma_decoder_uninit(&decoder);
-
     m_cfg = kiss_fftr_alloc(nfftSize, 0 , nullptr, nullptr);
     if (m_cfg == nullptr) {
         std::cerr << "Error: Failed to allocate Kiss FFT configuration." << std::endl;
         return;
     }
-
     m_fftIn.resize(m_nfft);
     m_fftOut.resize(m_nfft / 2 + 1);
-    m_frequencyOut.resize(m_nfft / 2 + 1);
 
-    // Initialize audio devices 
-    ma_device_config deviceConfig = ma_device_config_init(ma_device_type_playback);
-    deviceConfig.playback.format   = ma_format_f32;
-    deviceConfig.playback.channels = m_channels;
-    deviceConfig.sampleRate        = m_sampleRate;
-    deviceConfig.dataCallback      = s_data_callback;
-    deviceConfig.pUserData         = this; // Pass 'this' pointer
-    if (ma_device_init(NULL, &deviceConfig, &m_device) != MA_SUCCESS) {
-        std::cerr << "Error: Failed to initialize playback device." << std::endl;
-        return;
+    for(auto& buffer : m_frequencyBuffers){
+        buffer.resize(m_nfft / 2 + 1, 0.0f);
     }
-
-    if (ma_device_start(&m_device) != MA_SUCCESS) {
-        std::cerr << "Error: Failed to start playback device." << std::endl;
-        ma_device_uninit(&m_device);
-        return;
-    }
-
-    std::cout << "Audio playback started." << std::endl;
 }
 
 Audio::~Audio(){
-    ma_device_uninit(&m_device);
-    kiss_fft_free(m_cfg);
+    if(m_cfg){
+        kiss_fft_free(m_cfg);
+    }
 }
 
 void Audio::Update(){
     if(!m_cfg ||m_pcmData.empty()){
         return;
     }
-    size_t currentPlaybackIndex = m_playbackSampleIndex;
+    size_t currentPlaybackIndex = m_playbackSampleIndex.load(std::memory_order_relaxed);
+
+    size_t frontIdx = m_frontBufferIndex.load(std::memory_order_relaxed);
+    size_t backIdx = 1 - frontIdx;
+    auto& backBuffer = m_frequencyBuffers[backIdx];
 
     if(currentPlaybackIndex + m_nfft > m_pcmData.size()){
-        std::fill(m_frequencyOut.begin(), m_frequencyOut.end(), 0.0f);
+        std::fill(backBuffer.begin(), backBuffer.end(), 0.0f);
+        m_frontBufferIndex.store(backIdx, std::memory_order_release);
         return;
     }
-    // TODO: Fix this for the bar visualization bug
-    // if(currentPlaybackIndex > m_visualSampleIndex + m_nfft){
-
-    // }
     std::copy(
-            m_pcmData.begin() + currentPlaybackIndex,
-            m_pcmData.begin() + currentPlaybackIndex + m_nfft,
-            m_fftIn.begin()
-        );
+        m_pcmData.begin() + currentPlaybackIndex,
+        m_pcmData.begin() + currentPlaybackIndex + m_nfft,
+        m_fftIn.begin()
+    );
 
-        kiss_fftr(m_cfg, m_fftIn.data(), m_fftOut.data());
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            for(size_t i = 0; i < m_frequencyOut.size(); ++i){
-                float real {m_fftOut.at(i).r};
-                float imagine {m_fftOut.at(i).i};
-                m_frequencyOut[i] = std::sqrt(real * real + imagine * imagine);
-            }
-        }
-        m_visualSampleIndex.store(m_playbackSampleIndex.load());
-}
-
-
-void Audio::s_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
-{
-    // Get the 'this' pointer we stored in pUserData
-    Audio* pAudio = (Audio*)pDevice->pUserData;
-    if (pAudio) {
-        pAudio->data_callback(pOutput, frameCount);
+    kiss_fftr(m_cfg, m_fftIn.data(), m_fftOut.data());
+    for(size_t i = 0; i < backBuffer.size(); ++i){
+        float real {m_fftOut.at(i).r};
+        float imagine {m_fftOut.at(i).i};
+        backBuffer[i] = std::sqrt(real * real + imagine * imagine);
     }
+
+    m_frontBufferIndex.store(backIdx, std::memory_order_release);
+    m_visualSampleIndex.store(currentPlaybackIndex, std::memory_order_relaxed);
 }
 
-void Audio::data_callback(void* pOutput, ma_uint32 frameCount)
-{
-    float* pOutputF32 = (float*)pOutput;
-    ma_uint32 samplesToRead = frameCount * m_channels;
+bool Audio::reload(const std::string& filename){
+    ma_decoder decoder;
+    ma_result result;
+    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, m_channels, m_sampleRate);
+    result = ma_decoder_init_file(filename.c_str(), &config, &decoder);
+    if(result != MA_SUCCESS){
+        std::cerr << "Error: Failed to load audio file: " << filename << std::endl;
+        return false;
+    }
+    ma_uint64 totalFrames {0};
+    ma_decoder_get_length_in_pcm_frames(&decoder, &totalFrames);
+    size_t totalSamples = totalFrames * m_channels;
+
+    m_pcmData.clear();
+    m_pcmData.resize(totalFrames);
+    ma_uint64 framesRead {0};
+    ma_decoder_read_pcm_frames(&decoder, m_pcmData.data(),totalFrames, &framesRead);
+    if(framesRead != totalFrames){
+        std::cerr << "Warning: Read less data than expected for " << filename << std::endl;
+        return false;
+    }
+    ma_decoder_uninit(&decoder);
+    m_playbackSampleIndex.store(0, std::memory_order_relaxed);
+    m_visualSampleIndex.store(0, std::memory_order_relaxed);
+}
+
+size_t Audio::readSamples(float *pOutput, size_t samplesToRead){
+    size_t currentIndex = m_playbackSampleIndex.load(std::memory_order_relaxed);
+    if(currentIndex >= m_pcmData.size() || m_pcmData.empty()){
+        return 0;
+    }
+
+    size_t availableSample = m_pcmData.size() - currentIndex;
+    size_t actualRead = std::min(samplesToRead, availableSample);
+
+    std::copy(m_pcmData.data() + currentIndex, m_pcmData.data() + currentIndex + actualRead, pOutput);
+    m_playbackSampleIndex.fetch_add(actualRead, std::memory_order_relaxed);
+    return actualRead;
+}
+
+// void Audio::s_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+// {
+//     // Get the 'this' pointer we stored in pUserData
+//     Audio* pAudio = (Audio*)pDevice->pUserData;
+//     if (pAudio) {
+//         pAudio->data_callback(pOutput, frameCount);
+//     }
+// }
+
+// void Audio::data_callback(void* pOutput, ma_uint32 frameCount)
+// {
+//     float* pOutputF32 = (float*)pOutput;
+//     ma_uint32 samplesToRead = frameCount * m_channels;
     
-    if (m_playbackSampleIndex + samplesToRead > m_pcmData.size()) {
-        // --- End of song ---
-        ma_uint32 remainingSamples = m_pcmData.size() - m_playbackSampleIndex;
-        std::copy(m_pcmData.data() + m_playbackSampleIndex, m_pcmData.data() + m_pcmData.size(), pOutputF32);
+//     if (m_playbackSampleIndex + samplesToRead > m_pcmData.size()) {
+//         // --- End of song ---
+//         ma_uint32 remainingSamples = m_pcmData.size() - m_playbackSampleIndex;
+//         std::copy(m_pcmData.data() + m_playbackSampleIndex, m_pcmData.data() + m_pcmData.size(), pOutputF32);
         
-        // Fill the rest with silence
-        for (ma_uint32 i = remainingSamples; i < samplesToRead; ++i) {
-            pOutputF32[i] = 0.0f;
-        }
-        m_playbackSampleIndex += remainingSamples; // Stop at the end
-    } else {
-        // --- Normal playback ---
-        std::copy(m_pcmData.data() + m_playbackSampleIndex, m_pcmData.data() + m_playbackSampleIndex + samplesToRead, pOutputF32);
-        m_playbackSampleIndex += samplesToRead;
-    }
-}
-
-void Audio::setVolume(float volume){
-    if(m_device.pContext){
-        ma_device_set_master_volume(&m_device, volume);
-    }
-}
-void Audio::playAudio(bool& start){
-    if(start){
-        if(ma_device_stop(&m_device) != MA_SUCCESS){
-            std::cerr << "Error: Failed to stop playback device." << std::endl;
-            ma_device_uninit(&m_device);
-        }
-        start = false;
-    }
-    else {
-        if(ma_device_start(&m_device) != MA_SUCCESS){
-            std::cerr << "Error: Failed to start playback device." << std::endl;
-            ma_device_uninit(&m_device);
-        }
-        start = true;
-    }
-}
+//         // Fill the rest with silence
+//         for (ma_uint32 i = remainingSamples; i < samplesToRead; ++i) {
+//             pOutputF32[i] = 0.0f;
+//         }
+//         m_playbackSampleIndex += remainingSamples; // Stop at the end
+//     } else {
+//         // --- Normal playback ---
+//         std::copy(m_pcmData.data() + m_playbackSampleIndex, m_pcmData.data() + m_playbackSampleIndex + samplesToRead, pOutputF32);
+//         m_playbackSampleIndex += samplesToRead;
+//     }
+// }
