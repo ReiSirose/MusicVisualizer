@@ -7,11 +7,12 @@
 #include <memory>
 #include <atomic>
 #include <future>
-#include "audio.h"
+
 
 enum class CacheState {Empty, Loading, Ready};
 enum class Direction {Forward, Backward, None};
 
+class Audio;
 
 class Song {
 public:
@@ -22,7 +23,7 @@ public:
     void nextSong ();
     void prevSong ();
     void togglePlay();
-    void setVolume();
+    void setVolume(float volume);
 
     Audio* currentSong();
 
