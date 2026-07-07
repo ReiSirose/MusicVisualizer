@@ -1,4 +1,6 @@
 build/
+build_debug/
+build_release/
 build-xcode/
 song/
 imgui.ini
@@ -8,3 +10,4 @@ imgui.ini
 *.exe
 *.DS_Store
 *.vscode
+*.trace

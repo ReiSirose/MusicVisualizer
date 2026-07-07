@@ -7,10 +7,20 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
 find_package(glm CONFIG REQUIRED)
 
+file(GLOB_RECURSE PROJECT_HEADERS "include/*.h" "include/*.hpp")
+file(GLOB_RECURSE IMGUI_HEADERS "third_party/imgui/*.h")
+file(GLOB_RECURSE KISSFFT_HEADERS "third_party/kiss_fft/*.h")
+
+# (Optional but recommended) Group them in Xcode folders
+source_group("Headers/Project" FILES ${PROJECT_HEADERS})
+source_group("Headers/ImGui" FILES ${IMGUI_HEADERS})
+source_group("Headers/KissFFT" FILES ${KISSFFT_HEADERS})
+
 # statically link kissfft lib
 add_library(kissfft_lib STATIC
     third_party/kiss_fft/kiss_fft.c
     third_party/kiss_fft/kiss_fftr.c
+    ${KISSFFT_HEADERS}
 )
 target_include_directories(kissfft_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/kiss_fft
@@ -37,6 +47,8 @@ add_executable(visualizer
     src/geometry.cpp
     third_party/glad/src/glad.c
     ${IMGUI_SOURCES}
+    ${IMGUI_HEADERS}
+    ${PROJECT_HEADERS}
 )
 
 # include directory into the executable
@@ -48,6 +60,17 @@ target_include_directories(visualizer PRIVATE
     # Third-party includes
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glad/include
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/include
+)
+
+target_compile_options(visualizer PRIVATE
+    # If the build type is Debug, use no optimization and include debug symbols
+    $<$<CONFIG:Debug>:-O0 -g3>
+    
+    # If the build type is Release, use aggressive optimization and enable Fast Math
+    $<$<CONFIG:Release>:-O3 -ffast-math>
+    
+    # If you want a specific "Size" optimized release mode
+    $<$<CONFIG:MinSizeRel>:-Os>
 )
 
 # link static lib into the main executable
