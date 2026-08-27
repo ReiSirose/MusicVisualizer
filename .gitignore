@@ -4,6 +4,7 @@ build_release/
 build-xcode/
 song/
 imgui.ini
+TODO.txt
 
 *.o
 *.out
