@@ -258,6 +258,62 @@ into `third_party/bin/`.
 <!-- TODO: note here once decided — should downloaded tracks auto-refresh
      the in-app playlist, or does the user need to restart visualizer? -->
 
+## Benchmark
+
+The following baseline was captured with Xcode Instruments while running the
+visualizer on macOS. The profile is intended to identify where optimization
+work will have the greatest impact; results will vary with the audio file,
+window size, hardware, and build configuration.
+
+The CPU bottleneck breakdown was 27.08% useful, 23.50% instruction
+processing, 44.77% instruction delivery, and 4.82% discarded, across
+7,526,891,024 cycles. The function-level percentages below come from an
+inclusive call tree, so nested rows overlap and should not be added together.
+
+### CPU Time Profile
+
+The profiled process used 616.57 ms of CPU time in total:
+
+| Area | CPU time | Share |
+|---|---:|---:|
+| `Audio::Audio()` | 274.39 ms | 44.5% |
+| `ma_decoder_read_pcm_frames` | 262.45 ms | 42.6% |
+| `Window::endFrame()` | 205.63 ms | 33.4% |
+| `swapBuffersNSGL` | 191.16 ms | 31.0% |
+| `Geometry::draw()` | 32.50 ms | 5.3% |
+| `Window::Window()` | 20.84 ms | 3.4% |
+
+Audio decoding during startup is the dominant measured application cost,
+while presenting frames through `swapBuffersNSGL` is the largest rendering
+cost.
+
+### CPU Cycle Profile
+
+The process used 6.65 billion CPU cycles. Audio initialization and decoding
+accounted for most of the measured cycles:
+
+| Area | Cycles | Share |
+|---|---:|---:|
+| `Audio::Audio()` | 5.15 G | 77.4% |
+| `ma_decoder_read_pcm_frames` | 5.00 G | 75.2% |
+| `Geometry::draw()` | 350.70 M | 5.3% |
+| `Window::endFrame()` | 179.60 M | 2.7% |
+| `Window::Window()` | 137.90 M | 2.1% |
+
+### Memory and Branch Behavior
+
+- The profile recorded 36.86 million L1 data-cache store misses and 34.87
+  million L1 data-cache load misses, along with 12.37 million L1 data TLB
+  misses.
+- It recorded 13.94 million branch mispredictions, including 12.58 million
+  conditional branch mispredictions.
+- A noticeable branch-misprediction spike occurred between three and four
+  seconds of runtime. L1 load misses also spiked during that interval, then
+  followed a roughly 50 ms repeating pattern.
+
+These results make audio decoding the first area to investigate, followed by
+frame presentation and the repeating runtime cache pattern.
+
 ## Known Issues
 
 - `Song::loadAudio()`, `nextSong()`, and `prevSong()` are declared in

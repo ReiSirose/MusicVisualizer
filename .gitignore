@@ -4,7 +4,6 @@ build_release/
 build-xcode/
 song/
 imgui.ini
-TODO.txt
 
 *.o
 *.out
@@ -12,3 +11,4 @@ TODO.txt
 *.DS_Store
 *.vscode
 *.trace
+*.txt
