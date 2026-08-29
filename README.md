@@ -19,6 +19,28 @@ audio track straight from a YouTube URL via `yt-dlp` + `ffmpeg`.
 
 The core goal of this project is to make a visualizer for my favorite songs.
 
+## Table of Contents
+
+- [Description](#description)
+- [Tech Stack](#tech-stack)
+- [Roadmap](#roadmap)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Build](#build)
+- [Usage](#usage)
+  - [Visualizer](#visualizer)
+  - [Downloader](#downloader)
+- [Design Notes](#design-notes)
+- [Benchmark](#benchmark)
+  - [CPU Time Profile](#cpu-time-profile)
+  - [CPU Cycle Profile](#cpu-cycle-profile)
+  - [Branch Prediction and Prefetcher Profile](#branch-prediction-and-prefetcher-profile)
+  - [CPU Cache Misses](#cpu-cache-misses)
+  - [Memory Load and Store Activity](#memory-load-and-store-activity)
+  - [Virtual Memory Activity](#virtual-memory-activity)
+- [Known Issues](#known-issues)
+- [Future Work](#future-work)
+
 ## 🛠️ Tech Stack
 
 * **Language:** C++17
@@ -300,16 +322,54 @@ accounted for most of the measured cycles:
 | `Window::endFrame()` | 179.60 M | 2.7% |
 | `Window::Window()` | 137.90 M | 2.1% |
 
-### Memory and Branch Behavior
+### Branch Prediction and Prefetcher Profile
 
-- The profile recorded 36.86 million L1 data-cache store misses and 34.87
-  million L1 data-cache load misses, along with 12.37 million L1 data TLB
-  misses.
-- It recorded 13.94 million branch mispredictions, including 12.58 million
-  conditional branch mispredictions.
-- A noticeable branch-misprediction spike occurred between three and four
-  seconds of runtime. L1 load misses also spiked during that interval, then
-  followed a roughly 50 ms repeating pattern.
+| Instrument counter | Count |
+|---|---:|
+| Unpredicted memory dependencies | 36,359,147 |
+| Incorrectly predicted other branches | 1,365,966 |
+| Incorrectly predicted conditional branches | 12,577,434 |
+| Incorrectly predicted branches | 13,943,400 |
+| Taken branches | 1,576,862,302 |
+| Branches | 2,032,775,147 |
+| SIMD vector arithmetic operations | 74,355,920 |
+| Cycles in this sample | 7,210,830,054 |
+
+### CPU Cache Misses
+
+| Instrument counter | Count |
+|---|---:|
+| L1 data TLB misses | 12,367,582 |
+| L1 data-cache store misses | 36,856,710 |
+| L1 data-cache load misses | 34,870,904 |
+| Cycles in this sample | 7,062,740,533 |
+
+### Memory Load and Store Activity
+
+| Instrument counter | Count |
+|---|---:|
+| Accesses crossing 64-byte cache lines (speculative) | 46,932,617 |
+| Accesses crossing pages (speculative) | 32,201 |
+| Non-temporal loads (speculative) | 38,952,822 |
+| Non-temporal stores (speculative) | 18,175,527 |
+| Cycles in this sample | 7,791,238,309 |
+
+### Virtual Memory Activity
+
+| Instrument counter | Count |
+|---|---:|
+| L1D TLB accesses (speculative) | 11,009,366,959 |
+| L1D TLB fills (speculative) | 6,932,958 |
+| L1D TLB misses (speculative) | 26,781,955 |
+| L2 TLB misses (speculative) | 2,560,560 |
+| MMU data access walks (speculative) | 2,791,103 |
+| Cycles in this sample | 7,139,342,671 |
+
+The branch-misprediction rate was 13,943,400 out of 2,032,775,147 recorded
+branches, or approximately 0.69%. Instruments showed a noticeable
+branch-misprediction spike between three and four seconds of runtime. L1
+data-cache load misses also spiked by approximately three million during
+that interval, then followed a roughly 50 ms repeating pattern.
 
 These results make audio decoding the first area to investigate, followed by
 frame presentation and the repeating runtime cache pattern.
