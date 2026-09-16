@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.25)
 project(MusicVisualizer LANGUAGES CXX C)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -62,6 +62,17 @@ target_include_directories(visualizer PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui/include
 )
 
+target_compile_options(visualizer PRIVATE
+    # If the build type is Debug, use no optimization and include debug symbols
+    $<$<CONFIG:Debug>:-O0 -g3>
+    
+    # If the build type is Release, use aggressive optimization and enable Fast Math
+    $<$<CONFIG:Release>:-O3 -ffast-math>
+    
+    # If you want a specific "Size" optimized release mode
+    $<$<CONFIG:MinSizeRel>:-Os>
+)
+
 # link static lib into the main executable
 target_link_libraries(visualizer PRIVATE 
     # Your custom library
@@ -76,16 +87,21 @@ add_executable(downloader src/downloader.cpp)
 set(TOOLS_DIR "${CMAKE_SOURCE_DIR}/third_party/bin")
 
 if(WIN32)
-    set(YT_DLP_PATH "${TOOLS_DIR}/yt-dlp.exe")
-    set(FFMPEG_PATH "${TOOLS_DIR}/ffmpeg.exe")
+    if(EXISTS "${TOOLS_DIR}/yt-dlp.exe")
+        set(YT_DLP_PATH "${TOOLS_DIR}/yt-dlp.exe")
+    else()
+        set(YT_DLP_PATH "yt-dlp")
+    endif()
+
+    if(EXISTS "${TOOLS_DIR}/ffmpeg.exe")
+        set(FFMPEG_PATH "${TOOLS_DIR}/ffmpeg.exe")
+    else()
+        set(FFMPEG_PATH "ffmpeg")
+    endif()
 else()
     set(YT_DLP_PATH "${TOOLS_DIR}/yt-dlp")
     set(FFMPEG_PATH "${TOOLS_DIR}/ffmpeg")
 endif()
-
-# Pass paths to C++ as preprocessor definitions
-add_definitions(-DYT_DLP_PATH="${YT_DLP_PATH}")
-add_definitions(-DFFMPEG_PATH="${FFMPEG_PATH}")
 
 target_compile_definitions(downloader PRIVATE 
     YT_DLP_PATH="${YT_DLP_PATH}"
@@ -101,8 +117,8 @@ if(APPLE)
         "-framework IOKit"
         "-framework CoreVideo"
     )
-elseif(LINUX)
-    target_link_libraries(visualizer PRIVATE m pthread dlfcn)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_libraries(visualizer PRIVATE m pthread ${CMAKE_DL_LIBS})
 elseif(WIN32)
     target_link_libraries(visualizer PRIVATE) 
 endif()
