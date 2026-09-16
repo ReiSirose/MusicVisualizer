@@ -6,10 +6,10 @@
 class Window {
 public:
 
-    Window(const char* title, unsigned int width, unsigned int height);
+    Window(const char* title, unsigned int width = 1280, unsigned int height = 720);
     ~Window();
     void processInput();
-    void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+    // void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 
     void startFrame();
     void endFrame();

@@ -23,18 +23,13 @@ const int NFFT = 1024;
 const int SAMPLE_RATE = 44100;
 const char* SONG_NAME = "flower thief";
 const char* SONG_PATH = "../song/flower_thief.mp3";
-const char* VERTEX_SHADER = "../shader/bar.vert";
-const char* FRAGMENT_SHADER = "../shader/bar.frag";
+
 int main (){
-    Audio audio (SONG_PATH, SAMPLE_RATE, NFFT);
-    Window window (SONG_NAME, SCREEN_WIDTH, SCREEN_HEIGHT);
-    Shader barShader(VERTEX_SHADER, FRAGMENT_SHADER);
-    Song playerList {"../song"};
-
-
-
-
-
+    Audio audio (SAMPLE_RATE, NFFT);
+    Window window (SONG_NAME);
+    Shader barShader {};
+    Song playerList {};
+    
     // duration in seconds
     size_t duration = audio.getPCM().size() / SAMPLE_RATE;
     

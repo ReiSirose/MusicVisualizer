@@ -16,7 +16,7 @@ class Audio;
 
 class Song {
 public:
-    Song(std::string_view playListPath);
+    Song(std::string_view playListPath = "../song");
     ~Song();
 
     void loadAudio(bool cache = false);

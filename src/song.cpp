@@ -26,8 +26,6 @@ Song::Song(std::string_view playListPath) : m_playListIndex{0}, m_playListPath{p
         std::cerr << "Error: " << e.what() << '\n';
     }
 
-    //Pre-allocate the audio object
-
     for(size_t i {0}; i < CACHE_SIZE; ++i){
         m_audioList[i] = std::make_unique<Audio>(44100, 1024);
         m_slotState[i].store(CacheState::Empty, std::memory_order_relaxed);
@@ -59,7 +57,6 @@ Audio* Song::currentSong() {
     return nullptr;
 }
 
-void Song::loadAudio(bool cache) {}
 void Song::nextSong() {
     if(m_totalSong == 0){
         return;
@@ -126,7 +123,7 @@ void Song::loadAudio(bool cache){
     if (m_prefetchTask.valid() && m_prefetchTask.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
         return; 
     }
-    
+
     size_t targetIdx = m_playListIndex;
     m_prefetchTask = std::async(std::launch::async, [this, targetIdx]() {
         prefetchWorker(targetIdx);

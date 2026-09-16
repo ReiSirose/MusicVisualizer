@@ -1,10 +1,16 @@
 build/
 build-xcode/
+build_debug/
+build_release/
 song/
 imgui.ini
+
+
 
 *.o
 *.out
 *.exe
 *.DS_Store
 *.vscode
+*.txt
+*.mp3

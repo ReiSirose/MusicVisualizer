@@ -12,7 +12,7 @@ private:
 public:
     unsigned int ID;
 
-    Shader(const char *vertexPath, const char *fragmentPath);
+    Shader(const char *vertexPath = "../shader/bar.vert", const char *fragmentPath = "../shader/bar.frag");
     
     void use();
 
